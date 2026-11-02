@@ -52,7 +52,7 @@ catch (err) {
     console.error('Database initialization error:', err);
 }
 // Start Server
-app.listen(config.port, () => {
+app.listen(config.port, '0.0.0.0', () => {
     console.log(`=======================================================`);
     console.log(`🌾 Rice Mill ERP Backend Service (TypeScript)`);
     console.log(`🚀 Server listening on http://localhost:${config.port}`);

@@ -3,13 +3,12 @@
   "version": "1.0.0",
   "description": "Comprehensive Rice Mill ERP (Raw, Parboiled, Steamed, Basmati & CMR)",
   "scripts": {
-    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue.bold,green.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "npm run dev --prefix backend",
-    "dev:frontend": "npm start --prefix frontend",
-    "start": "npm run start --prefix backend",
+    "start": "concurrently -n \"API,UI\" -c \"blue.bold,green.bold\" \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "npm run dev --prefix backend",
+    "start:frontend": "npm start --prefix frontend",
     "build:backend": "npm run build --prefix backend",
     "build:frontend": "npm run build --prefix frontend",
-    "build": "npm run build:frontend && npm run build:backend"
+    "build": "npm run build:backend && npm run build:frontend"
   },
   "keywords": [
     "rice-mill",

@@ -1,7 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
-import fs from 'fs';
 import { config } from './config.js';
 import { initDatabase } from './database/db.js';
 import { seedDefaultAccounts, seedSampleParties } from './database/seed.js';
@@ -29,24 +27,10 @@ app.use('/api/reports', reportsRouter);
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'online',
-    app: 'Rice Mill ERP Accounting Core',
+    service: 'Rice Mill ERP Backend API',
     timestamp: new Date().toISOString()
   });
 });
-
-// Serve Angular frontend if built
-const frontendDist = path.resolve(process.cwd(), '..', 'frontend', 'dist', 'frontend', 'browser');
-if (fs.existsSync(frontendDist)) {
-  app.use(express.static(frontendDist));
-  
-  // SPA fallback middleware for Angular routing
-  app.use((req, res, next) => {
-    if (req.method === 'GET' && !req.path.startsWith('/api')) {
-      return res.sendFile(path.join(frontendDist, 'index.html'));
-    }
-    next();
-  });
-}
 
 // Initialize database schema and default seeds
 try {
@@ -59,12 +43,11 @@ try {
   console.error('Database initialization error:', err);
 }
 
-// Start Server
-app.listen(config.port, () => {
+// Start Server on dedicated API port (3000)
+app.listen(config.port, '0.0.0.0', () => {
   console.log(`=======================================================`);
-  console.log(`🌾 Rice Mill ERP Backend Service (TypeScript)`);
-  console.log(`🚀 Server listening on http://localhost:${config.port}`);
-  console.log(`💾 SQLite DB: ${config.dbPath}`);
-  console.log(`💻 Web UI available at: http://localhost:${config.port}`);
+  console.log(`🌾 Rice Mill ERP Backend API (TypeScript)`);
+  console.log(`🚀 API Server running on: http://127.0.0.1:${config.port}`);
+  console.log(`💾 SQLite Database: ${config.dbPath}`);
   console.log(`=======================================================`);
 });

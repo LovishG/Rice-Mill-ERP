@@ -5,8 +5,8 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc && node -e \"const fs = require('fs'); fs.copyFileSync('src/database/schema.sql', 'dist/database/schema.sql');\"",
+    "dev": "npx tsx watch src/server.ts",
+    "build": "npx tsc && node -e \"const fs = require('fs'); fs.copyFileSync('src/database/schema.sql', 'dist/database/schema.sql');\"",
     "start": "node dist/server.js"
   },
   "keywords": ["rice-mill", "erp", "accounting", "better-sqlite3"],
