@@ -18,7 +18,7 @@ import {
 })
 export class ApiService {
   private http = inject(HttpClient);
-  private baseUrl = 'http://localhost:3000/api';
+  private baseUrl = '/api';
 
   // Parties & Mandis
   getParties(type?: PartyType): Observable<Party[]> {

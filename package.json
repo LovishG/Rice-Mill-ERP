@@ -3,14 +3,25 @@
   "version": "1.0.0",
   "description": "Comprehensive Rice Mill ERP (Raw, Parboiled, Steamed, Basmati & CMR)",
   "scripts": {
-    "start": "npm run start --prefix backend",
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue.bold,green.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm start --prefix frontend",
+    "start": "npm run start --prefix backend",
     "build:backend": "npm run build --prefix backend",
     "build:frontend": "npm run build --prefix frontend",
     "build": "npm run build:frontend && npm run build:backend"
   },
-  "keywords": ["rice-mill", "erp", "angular22", "ng-zorro", "better-sqlite3", "typescript"],
+  "keywords": [
+    "rice-mill",
+    "erp",
+    "angular22",
+    "ng-zorro",
+    "better-sqlite3",
+    "typescript"
+  ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
 }
