@@ -1,0 +1,238 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2 class="title">👥 Party & Mandi Khata Master</h2>
+      <p class="subtitle">Manage Mandi Commission Agents, Rice Buyers, Brokers, Transporters & Govt Agencies</p>
+    </div>
+    <div>
+      <button nz-button nzType="primary" (click)="openNewPartyDrawer()">
+        + Add New Party / Mandi Firm
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Buttons -->
+  <div class="filter-bar">
+    <nz-radio-group [(ngModel)]="activeTab" (ngModelChange)="onTabChange($event)" nzButtonStyle="solid">
+      <label nz-radio-button nzValue="ALL">All Parties ({{ parties().length }})</label>
+      <label nz-radio-button nzValue="MANDI_AGENT">🌾 Mandi Arhatiyas</label>
+      <label nz-radio-button nzValue="COMMERCIAL_BUYER">🍚 Rice Buyers</label>
+      <label nz-radio-button nzValue="BROKER">🤝 Brokers</label>
+      <label nz-radio-button nzValue="TRANSPORTER">🚚 Transporters</label>
+      <label nz-radio-button nzValue="CMR_AGENCY">🏛️ Govt CMR</label>
+    </nz-radio-group>
+  </div>
+
+  <!-- Main Table -->
+  <nz-card class="table-card">
+    <nz-table 
+      #partyTable 
+      [nzData]="filteredParties()" 
+      [nzLoading]="loading()" 
+      nzBordered 
+      nzSize="middle">
+      <thead>
+        <tr>
+          <th>Party Name</th>
+          <th>Type</th>
+          <th>Mandi / Location</th>
+          <th>Contact & Phone</th>
+          <th>Bank / IFSC</th>
+          <th class="num-col">Current Balance (Khata)</th>
+          <th nzAlign="center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (party of partyTable.data; track party.id) {
+          <tr>
+            <td>
+              <strong>{{ party.name }}</strong>
+              @if (party.apmc_license_no) {
+                <div class="small-text">Lic: {{ party.apmc_license_no }}</div>
+              }
+            </td>
+            <td>
+              <nz-tag [nzColor]="getPartyTypeTag(party.party_type).color">
+                {{ getPartyTypeTag(party.party_type).label }}
+              </nz-tag>
+            </td>
+            <td>
+              <div>{{ party.mandi_name || '-' }}</div>
+              <small class="text-muted">{{ party.city ? party.city + ', ' + party.state : '' }}</small>
+            </td>
+            <td>
+              <div>{{ party.contact_person || '-' }}</div>
+              <small class="text-muted">{{ party.phone }}</small>
+            </td>
+            <td>
+              <div>{{ party.bank_name || '-' }}</div>
+              <small class="text-muted">{{ party.bank_account_no }} ({{ party.bank_ifsc }})</small>
+            </td>
+            <td class="num-col font-bold">
+              @if ((party.current_balance || 0) < 0) {
+                <span class="credit-val">
+                  ₹{{ Math.abs(party.current_balance || 0) | number:'1.2-2' }} Cr (Payable)
+                </span>
+              } @else if ((party.current_balance || 0) > 0) {
+                <span class="debit-val">
+                  ₹{{ (party.current_balance || 0) | number:'1.2-2' }} Dr (Receivable)
+                </span>
+              } @else {
+                <span class="text-muted">₹0.00 Nil</span>
+              }
+            </td>
+            <td nzAlign="center">
+              <button nz-button nzType="default" nzSize="small" (click)="viewLedger(party.id)">
+                View Khata / Ledger
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <!-- Add Party Drawer -->
+  <nz-drawer
+    [nzVisible]="drawerVisible"
+    [nzWidth]="640"
+    nzTitle="Create Party / Mandi Agent Master"
+    (nzOnClose)="closeDrawer()">
+    <ng-container *nzDrawerContent>
+      <form nz-form [formGroup]="partyForm" nzLayout="vertical">
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="16">
+            <nz-form-item>
+              <nz-form-label nzRequired>Party / Firm Name</nz-form-label>
+              <nz-form-control nzErrorTip="Name is required">
+                <input nz-input formControlName="name" placeholder="e.g. M/s Shiv Rice Traders" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label nzRequired>Party Type</nz-form-label>
+              <nz-form-control>
+                <nz-select formControlName="party_type">
+                  <nz-option nzValue="MANDI_AGENT" nzLabel="Mandi Arhatiya"></nz-option>
+                  <nz-option nzValue="COMMERCIAL_BUYER" nzLabel="Rice Buyer"></nz-option>
+                  <nz-option nzValue="BROKER" nzLabel="Broker (Dalal)"></nz-option>
+                  <nz-option nzValue="TRANSPORTER" nzLabel="Transporter"></nz-option>
+                  <nz-option nzValue="HAMALI_CONTRACTOR" nzLabel="Hamali Contractor"></nz-option>
+                  <nz-option nzValue="CMR_AGENCY" nzLabel="Govt CMR Agency"></nz-option>
+                  <nz-option nzValue="OTHER_VENDOR" nzLabel="Other Vendor"></nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <nz-divider nzText="Mandi & Contact Details"></nz-divider>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>Mandi Name (If applicable)</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="mandi_name" placeholder="e.g. Karnal Grain Market" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>APMC License No</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="apmc_license_no" placeholder="e.g. APMC/2026/99" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>Contact Person</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="contact_person" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>Phone Number</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="phone" placeholder="Mobile / Landline" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>City</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="city" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>State</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="state" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <nz-divider nzText="Banking & Initial Khata Balance"></nz-divider>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label>Bank Name</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="bank_name" placeholder="e.g. SBI, HDFC" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label>Account Number</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="bank_account_no" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label>IFSC Code</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="bank_ifsc" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>Opening Balance (₹)</nz-form-label>
+              <nz-form-control nzExtra="Positive = Receivable (Dr), Negative = Payable to party (Cr)">
+                <nz-input-number style="width: 100%;" formControlName="opening_balance" [nzStep]="1000"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <div class="drawer-actions">
+          <button nz-button (click)="closeDrawer()">Cancel</button>
+          <button nz-button nzType="primary" (click)="saveParty()" [nzLoading]="loading()">
+            Save Party Master
+          </button>
+        </div>
+      </form>
+    </ng-container>
+  </nz-drawer>
+</div>

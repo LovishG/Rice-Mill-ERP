@@ -1,0 +1,164 @@
+<div class="page-container">
+  <!-- Top Selection Controls (Hidden on Print) -->
+  <div class="controls-bar no-print">
+    <div class="selection-row">
+      <div style="width: 350px;">
+        <label class="control-label">Select Party / Mandi Firm:</label>
+        <nz-select 
+          style="width: 100%;" 
+          [ngModel]="selectedPartyId" 
+          (ngModelChange)="onPartyChange($event)"
+          nzPlaceHolder="Select Party">
+          @for (p of parties(); track p.id) {
+            <nz-option [nzValue]="p.id" [nzLabel]="p.name + ' (' + (p.mandi_name || p.city || 'Party') + ')'"></nz-option>
+          }
+        </nz-select>
+      </div>
+
+      <div>
+        <label class="control-label">From Date:</label>
+        <input nz-input type="date" [(ngModel)]="fromDate" (change)="fetchLedger()" />
+      </div>
+
+      <div>
+        <label class="control-label">To Date:</label>
+        <input nz-input type="date" [(ngModel)]="toDate" (change)="fetchLedger()" />
+      </div>
+
+      <div style="align-self: flex-end;">
+        <button nz-button nzType="primary" (click)="printStatement()">
+          🖨️ Print Khata Statement
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (ledgerData(); as report) {
+    <!-- Ledger Header (Visible on Screen and Print) -->
+    <div class="ledger-header">
+      <div class="mill-banner">
+        <h2>RICE MILL KHATA STATEMENT</h2>
+        <h3>{{ report.party_name }}</h3>
+        <p>
+          <nz-tag nzColor="blue">{{ report.party_type }}</nz-tag>
+          @if (report.mandi_name) {
+            <span> | Mandi: <strong>{{ report.mandi_name }}</strong></span>
+          }
+          @if (report.from_date || report.to_date) {
+            <span> | Period: {{ report.from_date || 'Beginning' }} to {{ report.to_date || 'Today' }}</span>
+          }
+        </p>
+      </div>
+
+      <!-- Financial Snapshot Cards (No-print) -->
+      <div class="stats-grid no-print">
+        <nz-card>
+          <nz-statistic 
+            [nzValue]="(Math.abs(report.opening_balance) | number:'1.2-2') || '0.00'" 
+            nzTitle="Opening Balance" 
+            nzPrefix="₹">
+          </nz-statistic>
+          <small [class.credit-val]="report.opening_balance < 0" [class.debit-val]="report.opening_balance > 0">
+            {{ report.opening_balance < 0 ? 'Credit (Payable)' : (report.opening_balance > 0 ? 'Debit (Receivable)' : 'Nil') }}
+          </small>
+        </nz-card>
+
+        <nz-card>
+          <nz-statistic 
+            [nzValue]="(report.total_credit | number:'1.2-2') || '0.00'" 
+            nzTitle="Total Credit (Paddy Bills)" 
+            nzPrefix="₹">
+          </nz-statistic>
+        </nz-card>
+
+        <nz-card>
+          <nz-statistic 
+            [nzValue]="(report.total_debit | number:'1.2-2') || '0.00'" 
+            nzTitle="Total Debit (Payments Made)" 
+            nzPrefix="₹">
+          </nz-statistic>
+        </nz-card>
+
+        <nz-card [class.card-payable]="report.closing_balance < 0" [class.card-receivable]="report.closing_balance > 0">
+          <nz-statistic 
+            [nzValue]="(Math.abs(report.closing_balance) | number:'1.2-2') || '0.00'" 
+            nzTitle="Net Closing Balance" 
+            nzPrefix="₹">
+          </nz-statistic>
+          <strong [class.credit-val]="report.closing_balance < 0" [class.debit-val]="report.closing_balance > 0">
+            {{ report.closing_balance < 0 ? 'NET PAYABLE (Cr)' : (report.closing_balance > 0 ? 'NET RECEIVABLE (Dr)' : 'Settled (Nil)') }}
+          </strong>
+        </nz-card>
+      </div>
+    </div>
+
+    <!-- Ledger Entries Table -->
+    <nz-card class="table-card">
+      <nz-table 
+        #entryTable 
+        [nzData]="report.entries" 
+        [nzLoading]="loading()" 
+        nzBordered 
+        [nzShowPagination]="false"
+        nzSize="middle">
+        <thead>
+          <tr>
+            <th style="width: 110px;">Date</th>
+            <th style="width: 140px;">Voucher No</th>
+            <th style="width: 120px;">Type</th>
+            <th style="width: 130px;">Ref / Bill No</th>
+            <th>Particulars / Narration</th>
+            <th class="num-col" style="width: 130px;">Debit (₹)</th>
+            <th class="num-col" style="width: 130px;">Credit (₹)</th>
+            <th class="num-col" style="width: 150px;">Running Balance (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Opening Balance Row -->
+          <tr class="opening-row">
+            <td>{{ report.from_date || 'Start' }}</td>
+            <td colspan="4"><strong>Opening Balance Brought Forward</strong></td>
+            <td class="num-col">{{ report.opening_balance > 0 ? (report.opening_balance | number:'1.2-2') : '-' }}</td>
+            <td class="num-col">{{ report.opening_balance < 0 ? (Math.abs(report.opening_balance) | number:'1.2-2') : '-' }}</td>
+            <td class="num-col font-bold">
+              {{ Math.abs(report.opening_balance) | number:'1.2-2' }} {{ report.opening_balance < 0 ? 'Cr' : (report.opening_balance > 0 ? 'Dr' : '') }}
+            </td>
+          </tr>
+
+          <!-- Transaction Rows -->
+          @for (e of entryTable.data; track e.voucher_id) {
+            <tr>
+              <td>{{ e.voucher_date }}</td>
+              <td><strong>{{ e.voucher_no }}</strong></td>
+              <td><nz-tag nzColor="default">{{ e.voucher_type }}</nz-tag></td>
+              <td>{{ e.reference_no || '-' }}</td>
+              <td>
+                <div>{{ e.narration }}</div>
+                <small class="text-muted">{{ e.account_name }}</small>
+              </td>
+              <td class="num-col">
+                {{ e.debit > 0 ? (e.debit | number:'1.2-2') : '-' }}
+              </td>
+              <td class="num-col">
+                {{ e.credit > 0 ? (e.credit | number:'1.2-2') : '-' }}
+              </td>
+              <td class="num-col font-bold">
+                {{ Math.abs(e.running_balance) | number:'1.2-2' }} {{ e.running_balance < 0 ? 'Cr' : 'Dr' }}
+              </td>
+            </tr>
+          }
+
+          <!-- Totals Row -->
+          <tr class="totals-row">
+            <td colspan="5" class="text-right"><strong>Total Turnover & Net Closing Balance:</strong></td>
+            <td class="num-col font-bold">₹{{ report.total_debit | number:'1.2-2' }}</td>
+            <td class="num-col font-bold">₹{{ report.total_credit | number:'1.2-2' }}</td>
+            <td class="num-col font-bold closing-cell">
+              ₹{{ Math.abs(report.closing_balance) | number:'1.2-2' }} {{ report.closing_balance < 0 ? 'Cr' : 'Dr' }}
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+    </nz-card>
+  }
+</div>

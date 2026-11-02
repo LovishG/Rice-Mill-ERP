@@ -1,0 +1,198 @@
+<div class="page-container">
+  <div class="page-header no-print">
+    <div>
+      <h2 class="title">💵 Mill Counter Daily Cash Book</h2>
+      <p class="subtitle">Track spot cash flows: truck driver advances, local purchases, and daily cash drawer tally</p>
+    </div>
+    <div class="action-buttons">
+      <button nz-button nzType="primary" (click)="openQuickModal('PAYMENT')">
+        - Cash Out (Payment)
+      </button>
+      <button nz-button nzType="default" (click)="openQuickModal('RECEIPT')">
+        + Cash In (Receipt)
+      </button>
+      <button nz-button (click)="printCashBook()">
+        🖨️ Print Cash Sheet
+      </button>
+    </div>
+  </div>
+
+  <!-- Date Selection Bar -->
+  <div class="date-bar no-print">
+    <label>Select Date:</label>
+    <input nz-input type="date" [(ngModel)]="selectedDate" (change)="loadCashBook()" style="width: 200px;" />
+  </div>
+
+  @if (cashBook(); as cb) {
+    <!-- Financial Summary Cards -->
+    <div class="stats-grid">
+      <nz-card>
+        <nz-statistic 
+          [nzValue]="(cb.opening_balance | number:'1.2-2') || '0.00'" 
+          nzTitle="Morning Opening Cash" 
+          nzPrefix="₹">
+        </nz-statistic>
+      </nz-card>
+
+      <nz-card>
+        <nz-statistic 
+          [nzValue]="(cb.total_cash_in | number:'1.2-2') || '0.00'" 
+          nzTitle="Total Cash Received (In)" 
+          nzPrefix="₹"
+          [nzValueStyle]="{ color: '#3f8600' }">
+        </nz-statistic>
+      </nz-card>
+
+      <nz-card>
+        <nz-statistic 
+          [nzValue]="(cb.total_cash_out | number:'1.2-2') || '0.00'" 
+          nzTitle="Total Cash Disbursed (Out)" 
+          nzPrefix="₹"
+          [nzValueStyle]="{ color: '#cf1322' }">
+        </nz-statistic>
+      </nz-card>
+
+      <nz-card class="closing-card">
+        <nz-statistic 
+          [nzValue]="(cb.closing_balance | number:'1.2-2') || '0.00'" 
+          nzTitle="Cash in Safe (Closing)" 
+          nzPrefix="₹"
+          [nzValueStyle]="{ color: '#096dd9', fontWeight: 'bold' }">
+        </nz-statistic>
+      </nz-card>
+    </div>
+
+    <!-- Cash Book Table -->
+    <nz-card class="table-card">
+      <nz-table 
+        #cashTable 
+        [nzData]="cb.entries" 
+        [nzLoading]="loading()" 
+        nzBordered 
+        [nzShowPagination]="false"
+        nzSize="middle">
+        <thead>
+          <tr>
+            <th style="width: 140px;">Voucher No</th>
+            <th style="width: 120px;">Type</th>
+            <th>Party / Payee</th>
+            <th>Description / Purpose</th>
+            <th class="num-col" style="width: 150px;">Cash In (Receipt ₹)</th>
+            <th class="num-col" style="width: 150px;">Cash Out (Payment ₹)</th>
+            <th class="num-col" style="width: 160px;">Cash Balance (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Opening Cash Row -->
+          <tr class="opening-row">
+            <td colspan="4"><strong>Opening Cash in Safe at Start of Day</strong></td>
+            <td class="num-col">-</td>
+            <td class="num-col">-</td>
+            <td class="num-col font-bold">₹{{ cb.opening_balance | number:'1.2-2' }}</td>
+          </tr>
+
+          @for (item of cashTable.data; track item.voucher_id) {
+            <tr>
+              <td><strong>{{ item.voucher_no }}</strong></td>
+              <td>
+                <nz-tag [nzColor]="item.cash_in > 0 ? 'green' : 'red'">
+                  {{ item.cash_in > 0 ? 'RECEIPT' : 'PAYMENT' }}
+                </nz-tag>
+              </td>
+              <td>{{ item.party_name || '-' }}</td>
+              <td>
+                {{ item.narration }}
+                @if (item.reference_no) {
+                  <small class="text-muted">Ref: {{ item.reference_no }}</small>
+                }
+              </td>
+              <td class="num-col debit-val">
+                {{ item.cash_in > 0 ? ('₹' + (item.cash_in | number:'1.2-2')) : '-' }}
+              </td>
+              <td class="num-col credit-val">
+                {{ item.cash_out > 0 ? ('₹' + (item.cash_out | number:'1.2-2')) : '-' }}
+              </td>
+              <td class="num-col font-bold">
+                ₹{{ item.running_balance | number:'1.2-2' }}
+              </td>
+            </tr>
+          }
+
+          @if (cb.entries.length === 0) {
+            <tr>
+              <td colspan="7" class="text-center text-muted" style="padding: 24px;">
+                No cash transactions recorded for {{ cb.date }}.
+              </td>
+            </tr>
+          }
+
+          <!-- Totals Row -->
+          <tr class="totals-row">
+            <td colspan="4" class="text-right"><strong>Day Total & Physical Closing Tally:</strong></td>
+            <td class="num-col font-bold debit-val">₹{{ cb.total_cash_in | number:'1.2-2' }}</td>
+            <td class="num-col font-bold credit-val">₹{{ cb.total_cash_out | number:'1.2-2' }}</td>
+            <td class="num-col font-bold" style="background: #e6f7ff; color: #096dd9;">
+              ₹{{ cb.closing_balance | number:'1.2-2' }}
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+    </nz-card>
+  }
+
+  <!-- Quick Cash Entry Modal -->
+  <nz-modal
+    [(nzVisible)]="quickVoucherModal"
+    [nzTitle]="voucherForm.get('type')?.value === 'PAYMENT' ? 'Record Cash Out (Payment)' : 'Record Cash In (Receipt)'"
+    (nzOnCancel)="quickVoucherModal = false"
+    (nzOnOk)="saveCashVoucher()">
+    <ng-container *nzModalContent>
+      <form nz-form [formGroup]="voucherForm" nzLayout="vertical">
+        <nz-form-item>
+          <nz-form-label nzRequired>Cash Amount (₹)</nz-form-label>
+          <nz-form-control>
+            <nz-input-number style="width: 100%; font-size: 18px;" formControlName="amount" [nzMin]="1" [nzStep]="100"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>Account Head</nz-form-label>
+          <nz-form-control nzErrorTip="Select Account">
+            <nz-select formControlName="account_id" nzPlaceHolder="Select Expense / Income / Party Account">
+              @for (acc of accounts(); track acc.id) {
+                @if (acc.code !== '1001') {
+                  <nz-option [nzValue]="acc.id" [nzLabel]="acc.code + ' - ' + acc.name + ' (' + acc.type + ')'"></nz-option>
+                }
+              }
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>Party / Payee (Optional)</nz-form-label>
+          <nz-form-control>
+            <nz-select formControlName="party_id" nzPlaceHolder="Select Party (e.g. Driver, Mandi Agent, Buyer)" [nzAllowClear]="true">
+              @for (p of parties(); track p.id) {
+                <nz-option [nzValue]="p.id" [nzLabel]="p.name"></nz-option>
+              }
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>Bill / Token / Receipt No</nz-form-label>
+          <nz-form-control>
+            <input nz-input formControlName="reference_no" placeholder="e.g. Slip #58, Diesel receipt" />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>Narration / Description</nz-form-label>
+          <nz-form-control nzErrorTip="Enter description">
+            <input nz-input formControlName="narration" placeholder="e.g. Truck PB-02 driver advance for diesel" />
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </ng-container>
+  </nz-modal>
+</div>

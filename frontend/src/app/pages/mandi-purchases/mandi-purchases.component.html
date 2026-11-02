@@ -1,0 +1,377 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h2 class="title">🌾 Mandi Paddy Procurement Bills</h2>
+      <p class="subtitle">Direct Mandi Arhatiya billing, automatic moisture cut, mandi cess, and ledger posting</p>
+    </div>
+    <div>
+      <button nz-button nzType="primary" (click)="openNewBillDrawer()">
+        + Record Mandi Purchase Bill
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="stats-grid">
+    <nz-card>
+      <nz-statistic [nzValue]="purchases().length" nzTitle="Total Mandi Bills"></nz-statistic>
+    </nz-card>
+    <nz-card>
+      <nz-statistic 
+        [nzValue]="(calculatedTotalQtl() | number:'1.2-2') || '0.00'" 
+        nzTitle="Total Net Quintals" 
+        nzSuffix="Qtl">
+      </nz-statistic>
+    </nz-card>
+    <nz-card>
+      <nz-statistic 
+        [nzValue]="(calculatedTotalAmount() | number:'1.2-2') || '0.00'" 
+        nzTitle="Total Purchase Value" 
+        nzPrefix="₹">
+      </nz-statistic>
+    </nz-card>
+  </div>
+
+  <!-- Main Table -->
+  <nz-card class="table-card">
+    <nz-table 
+      #basicTable 
+      [nzData]="purchases()" 
+      [nzLoading]="loading()" 
+      nzBordered 
+      nzSize="middle">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Bill No</th>
+          <th>Mandi Agent / Firm</th>
+          <th>Paddy Variety</th>
+          <th class="num-col">Bags</th>
+          <th class="num-col">Net Wt (Qtl)</th>
+          <th class="num-col">Moisture %</th>
+          <th class="num-col">Billable (Qtl)</th>
+          <th class="num-col">Rate (₹)</th>
+          <th class="num-col">Net Payable (₹)</th>
+          <th nzAlign="center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (data of basicTable.data; track data.id) {
+          <tr>
+            <td>{{ data.bill_date }}</td>
+            <td><strong>{{ data.bill_no }}</strong></td>
+            <td>
+              <div>{{ data.mandi_party_name }}</div>
+              @if (data.gate_pass_no) {
+                <small class="text-muted">Gate Pass: {{ data.gate_pass_no }}</small>
+              }
+            </td>
+            <td><nz-tag nzColor="blue">{{ data.paddy_variety }}</nz-tag></td>
+            <td class="num-col">{{ data.total_bags }} ({{ data.bag_type }})</td>
+            <td class="num-col">{{ data.net_weight_qtl | number:'1.2-2' }}</td>
+            <td class="num-col">
+              <span [class.moisture-high]="data.moisture_percent > 14">
+                {{ data.moisture_percent }}%
+              </span>
+            </td>
+            <td class="num-col font-bold">{{ data.final_billable_qtl | number:'1.2-2' }}</td>
+            <td class="num-col">₹{{ data.rate_per_qtl | number:'1.2-2' }}</td>
+            <td class="num-col font-bold" style="color: #cf1322;">
+              ₹{{ data.net_payable_amount | number:'1.2-2' }}
+            </td>
+            <td nzAlign="center">
+              <button nz-button nzSize="small" (click)="viewDetails(data)">
+                View & Print
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <!-- Create New Mandi Purchase Bill Drawer -->
+  <nz-drawer
+    [nzVisible]="drawerVisible"
+    [nzWidth]="780"
+    nzTitle="Record Inward Mandi Paddy Bill (Bikri Parchi)"
+    (nzOnClose)="closeDrawer()">
+    <ng-container *nzDrawerContent>
+      <form nz-form [formGroup]="purchaseForm" nzLayout="vertical">
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Mandi Arhatiya / Firm</nz-form-label>
+              <nz-form-control nzErrorTip="Select Mandi Agent">
+                <nz-select formControlName="mandi_party_id" nzPlaceHolder="Select Mandi Agent / Firm">
+                  @for (party of mandiParties(); track party.id) {
+                    <nz-option [nzValue]="party.id" [nzLabel]="party.name + ' (' + (party.mandi_name || 'Mandi') + ')'"></nz-option>
+                  }
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzSpan]="6">
+            <nz-form-item>
+              <nz-form-label nzRequired>Mandi Bill No</nz-form-label>
+              <nz-form-control nzErrorTip="Enter Bill No">
+                <input nz-input formControlName="bill_no" placeholder="e.g. KNL-1042" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzSpan]="6">
+            <nz-form-item>
+              <nz-form-label nzRequired>Bill Date</nz-form-label>
+              <nz-form-control nzErrorTip="Select Date">
+                <input nz-input type="date" formControlName="bill_date" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label nzRequired>Paddy Variety / Grain Line</nz-form-label>
+              <nz-form-control>
+                <nz-select formControlName="paddy_variety">
+                  @for (v of paddyVarieties; track v) {
+                    <nz-option [nzValue]="v" [nzLabel]="v"></nz-option>
+                  }
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label nzRequired>Total Bags</nz-form-label>
+              <nz-form-control>
+                <nz-input-number style="width: 100%;" formControlName="total_bags" [nzMin]="1" [nzStep]="1"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label>Bag Packaging Type</nz-form-label>
+              <nz-form-control>
+                <nz-select formControlName="bag_type">
+                  <nz-option nzValue="HDPE" nzLabel="HDPE / PP Bag"></nz-option>
+                  <nz-option nzValue="JUTE" nzLabel="Jute / Gunny Bag"></nz-option>
+                  <nz-option nzValue="LOOSE" nzLabel="Loose Bulker"></nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <nz-divider nzText="Weighment & Moisture Quality (Refraction)"></nz-divider>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="6">
+            <nz-form-item>
+              <nz-form-label nzRequired>Gross Wt (Qtl)</nz-form-label>
+              <nz-form-control>
+                <nz-input-number style="width: 100%;" formControlName="gross_weight_qtl" [nzMin]="0.1" [nzStep]="0.1"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzSpan]="6">
+            <nz-form-item>
+              <nz-form-label nzRequired>Tare Wt (Qtl)</nz-form-label>
+              <nz-form-control>
+                <nz-input-number style="width: 100%;" formControlName="tare_weight_qtl" [nzMin]="0" [nzStep]="0.1"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzSpan]="6">
+            <nz-form-item>
+              <nz-form-label nzRequired>Moisture % (14% Base)</nz-form-label>
+              <nz-form-control>
+                <nz-input-number style="width: 100%;" formControlName="moisture_percent" [nzMin]="0" [nzMax]="35" [nzStep]="0.5"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzSpan]="6">
+            <nz-form-item>
+              <nz-form-label nzRequired>Rate / Qtl (₹)</nz-form-label>
+              <nz-form-control>
+                <nz-input-number style="width: 100%;" formControlName="rate_per_qtl" [nzMin]="1" [nzStep]="10"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <nz-divider nzText="Mandi Levies, Commissions & Labor Charges"></nz-divider>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="6">
+            <nz-form-item>
+              <nz-form-label>Mandi Cess %</nz-form-label>
+              <nz-form-control>
+                <nz-input-number style="width: 100%;" formControlName="mandi_cess_percent" [nzStep]="0.5"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzSpan]="6">
+            <nz-form-item>
+              <nz-form-label>Arhat (Comm) %</nz-form-label>
+              <nz-form-control>
+                <nz-input-number style="width: 100%;" formControlName="arhat_percent" [nzStep]="0.5"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzSpan]="6">
+            <nz-form-item>
+              <nz-form-label>RDF Cess %</nz-form-label>
+              <nz-form-control>
+                <nz-input-number style="width: 100%;" formControlName="rdf_percent" [nzStep]="0.5"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzSpan]="6">
+            <nz-form-item>
+              <nz-form-label>Mandi Labor (₹)</nz-form-label>
+              <nz-form-control>
+                <nz-input-number style="width: 100%;" formControlName="mandi_labor_amount" [nzStep]="100"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <!-- Live Calculation Summary Card -->
+        <div class="calculation-box">
+          <div class="calc-row">
+            <span>Net Weight:</span>
+            <strong>{{ calculatedNetWeight() }} Qtl</strong>
+          </div>
+          <div class="calc-row" *ngIf="calculatedMoistureCut() > 0">
+            <span class="text-danger">Moisture Deduction (>14%):</span>
+            <strong class="text-danger">-{{ calculatedMoistureCut() }} Qtl</strong>
+          </div>
+          <div class="calc-row highlight">
+            <span>Billable Weight:</span>
+            <strong>{{ calculatedBillableWeight() }} Qtl</strong>
+          </div>
+          <div class="calc-row">
+            <span>Base Paddy Cost:</span>
+            <span>₹{{ calculatedBaseAmount() | number:'1.2-2' }}</span>
+          </div>
+          <div class="calc-row">
+            <span>Mandi Cess + Arhat + RDF:</span>
+            <span>₹{{ (calculatedMandiCess() + calculatedArhat() + calculatedRdf()) | number:'1.2-2' }}</span>
+          </div>
+          <nz-divider style="margin: 8px 0;"></nz-divider>
+          <div class="calc-row total">
+            <span>Net Amount Payable to Mandi:</span>
+            <span class="total-amount">₹{{ calculatedNetPayable() | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="drawer-actions">
+          <button nz-button (click)="closeDrawer()">Cancel</button>
+          <button nz-button nzType="primary" (click)="submitPurchase()" [nzLoading]="loading()">
+            Save Bill & Post Ledger Voucher
+          </button>
+        </div>
+      </form>
+    </ng-container>
+  </nz-drawer>
+
+  <!-- Bill View & Print Modal -->
+  <nz-modal
+    [(nzVisible)]="detailsModalVisible"
+    nzTitle="Mandi Inward Purchase Slip"
+    [nzWidth]="680"
+    (nzOnCancel)="detailsModalVisible = false"
+    [nzFooter]="modalFooter">
+    <ng-container *nzModalContent>
+      @if (selectedPurchase) {
+        <div class="bill-printout" id="printable-bill">
+          <div class="text-center">
+            <h3>RICE MILL INWARD PURCHASE VOUCHER</h3>
+            <p>Mandi Bikri Parchi & Quality Settlement</p>
+          </div>
+          <nz-divider></nz-divider>
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzSpan]="12">
+              <p><strong>Mandi Agent:</strong> {{ selectedPurchase.mandi_party_name }}</p>
+              <p><strong>Bill No:</strong> {{ selectedPurchase.bill_no }}</p>
+              <p><strong>Date:</strong> {{ selectedPurchase.bill_date }}</p>
+            </div>
+            <div nz-col [nzSpan]="12">
+              <p><strong>Variety:</strong> {{ selectedPurchase.paddy_variety }}</p>
+              <p><strong>Total Bags:</strong> {{ selectedPurchase.total_bags }} ({{ selectedPurchase.bag_type }})</p>
+              <p><strong>Voucher Ref:</strong> #{{ selectedPurchase.voucher_id }}</p>
+            </div>
+          </div>
+          <nz-divider></nz-divider>
+          <table class="simple-table">
+            <tr>
+              <td>Gross Weight:</td>
+              <td class="text-right">{{ selectedPurchase.gross_weight_qtl }} Qtl</td>
+            </tr>
+            <tr>
+              <td>Tare Weight:</td>
+              <td class="text-right">{{ selectedPurchase.tare_weight_qtl }} Qtl</td>
+            </tr>
+            <tr>
+              <td><strong>Net Weight:</strong></td>
+              <td class="text-right"><strong>{{ selectedPurchase.net_weight_qtl }} Qtl</strong></td>
+            </tr>
+            <tr>
+              <td>Moisture % & Deduction:</td>
+              <td class="text-right">{{ selectedPurchase.moisture_percent }}% (Cut: -{{ selectedPurchase.moisture_cut_qtl }} Qtl)</td>
+            </tr>
+            <tr class="highlight-row">
+              <td><strong>Final Billable Weight:</strong></td>
+              <td class="text-right"><strong>{{ selectedPurchase.final_billable_qtl }} Qtl</strong></td>
+            </tr>
+            <tr>
+              <td>Rate per Quintal:</td>
+              <td class="text-right">₹{{ selectedPurchase.rate_per_qtl }}</td>
+            </tr>
+            <tr>
+              <td>Base Paddy Value:</td>
+              <td class="text-right">₹{{ selectedPurchase.base_paddy_amount | number:'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td>Mandi Cess ({{ selectedPurchase.mandi_cess_percent }}%):</td>
+              <td class="text-right">₹{{ selectedPurchase.mandi_cess_amount | number:'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td>Arhat / Commission ({{ selectedPurchase.arhat_percent }}%):</td>
+              <td class="text-right">₹{{ selectedPurchase.arhat_amount | number:'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td>RDF Cess ({{ selectedPurchase.rdf_percent }}%):</td>
+              <td class="text-right">₹{{ selectedPurchase.rdf_amount | number:'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td>Mandi Labor / Loading:</td>
+              <td class="text-right">₹{{ selectedPurchase.mandi_labor_amount | number:'1.2-2' }}</td>
+            </tr>
+            <tr class="total-row">
+              <td><strong>Net Amount Credited to Mandi Khata:</strong></td>
+              <td class="text-right"><strong>₹{{ selectedPurchase.net_payable_amount | number:'1.2-2' }}</strong></td>
+            </tr>
+          </table>
+        </div>
+      }
+    </ng-container>
+    <ng-template #modalFooter>
+      <button nz-button (click)="detailsModalVisible = false">Close</button>
+      <button nz-button nzType="primary" (click)="printCurrentBill()">Print Voucher Slip</button>
+    </ng-template>
+  </nz-modal>
+</div>

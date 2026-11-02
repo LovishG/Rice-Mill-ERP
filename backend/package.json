@@ -1,0 +1,30 @@
+{
+  "name": "rice-mill-backend",
+  "version": "1.0.0",
+  "description": "Rice Mill ERP Core Backend with better-sqlite3 and TypeScript",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc && node -e \"const fs = require('fs'); fs.copyFileSync('src/database/schema.sql', 'dist/database/schema.sql');\"",
+    "start": "node dist/server.js"
+  },
+  "keywords": ["rice-mill", "erp", "accounting", "better-sqlite3"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
+    "express": "^4.21.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.11.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

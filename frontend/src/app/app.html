@@ -1,0 +1,75 @@
+<nz-layout class="app-layout">
+  <!-- Sider -->
+  <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzWidth]="250" class="app-sider no-print">
+    <div class="logo-box">
+      <span class="logo-icon">🌾</span>
+      @if (!isCollapsed) {
+        <div class="logo-text">
+          <span class="brand-title">RICE MILL ERP</span>
+          <span class="brand-subtitle">Commercial & CMR</span>
+        </div>
+      }
+    </div>
+
+    <ul nz-menu nzTheme="dark" nzMode="inline">
+      <li nz-menu-item routerLink="/mandi-purchases" routerLinkActive="ant-menu-item-selected">
+        <span class="menu-icon">🌾</span>
+        <span>Mandi Purchases</span>
+      </li>
+
+      <li nz-menu-item routerLink="/parties" routerLinkActive="ant-menu-item-selected">
+        <span class="menu-icon">👥</span>
+        <span>Party & Mandi Khata</span>
+      </li>
+
+      <li nz-menu-item routerLink="/ledger" routerLinkActive="ant-menu-item-selected">
+        <span class="menu-icon">📜</span>
+        <span>Ledger Statement</span>
+      </li>
+
+      <li nz-menu-item routerLink="/cash-book" routerLinkActive="ant-menu-item-selected">
+        <span class="menu-icon">💵</span>
+        <span>Mill Cash Book</span>
+      </li>
+
+      <li nz-menu-item routerLink="/accounts" routerLinkActive="ant-menu-item-selected">
+        <span class="menu-icon">📚</span>
+        <span>Chart of Accounts</span>
+      </li>
+    </ul>
+
+    @if (!isCollapsed) {
+      <div class="mill-type-badge">
+        <small>Active Lines:</small>
+        <div class="tag-row">
+          <nz-tag nzColor="blue">Raw</nz-tag>
+          <nz-tag nzColor="gold">Parboiled</nz-tag>
+          <nz-tag nzColor="cyan">Steamed</nz-tag>
+          <nz-tag nzColor="green">Basmati</nz-tag>
+          <nz-tag nzColor="red">CMR</nz-tag>
+        </div>
+      </div>
+    }
+  </nz-sider>
+
+  <!-- Main Content Layout -->
+  <nz-layout>
+    <nz-header class="app-header no-print">
+      <div class="header-left">
+        <span class="header-status">
+          <nz-badge nzStatus="processing"></nz-badge>
+          <span>Local Engine Active</span>
+        </span>
+        <span class="engine-info">SQLite WAL Mode (ACID)</span>
+      </div>
+      <div class="header-right">
+        <nz-tag nzColor="success">FY {{ currentYear }}-{{ currentYear + 1 }}</nz-tag>
+        <span class="operator-badge">Mill Administrator</span>
+      </div>
+    </nz-header>
+
+    <nz-content class="app-content">
+      <router-outlet></router-outlet>
+    </nz-content>
+  </nz-layout>
+</nz-layout>
